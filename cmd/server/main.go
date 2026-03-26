@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/bootdotdev/learn-pub-sub-starter/internal/pubsub"
+	"github.com/bootdotdev/learn-pub-sub-starter/internal/routing"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -16,10 +18,22 @@ func main() {
 
 	connection, err := amqp.Dial(connectionString)
 	if err != nil {
-		log.Fatal("connection couldnt be dialed")
+		log.Fatal("connection couldnt be dialed:", err)
 	}
 	defer connection.Close()
 	fmt.Println("Connection was successful")
+
+	channel, err := connection.Channel()
+	if err != nil {
+		log.Fatal("Channel couldnt be created:", err)
+	}
+
+	err = pubsub.PublishJSON(channel, routing.ExchangePerilDirect, routing.PauseKey, routing.PlayingState{
+		IsPaused: true,
+	})
+	if err != nil {
+		log.Fatal("couldnt publish json:", err)
+	}
 
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt)
