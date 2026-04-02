@@ -27,6 +27,11 @@ func main() {
 		log.Fatal("Channel couldnt be created:", err)
 	}
 
+	_, _, err = pubsub.DeclareAndBind(connection, routing.ExchangePerilTopic, routing.GameLogSlug, routing.GameLogSlug+".*", pubsub.Durable)
+	if err != nil {
+		log.Fatal("connection couldnt be bind:", err)
+	}
+
 	gamelogic.PrintServerHelp()
 
 	for {
