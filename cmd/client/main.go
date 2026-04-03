@@ -27,12 +27,12 @@ func main() {
 		log.Fatal("username couldnt be retrieve", err)
 	}
 
-	_, _, err = pubsub.DeclareAndBind(connection, routing.ExchangePerilDirect, routing.PauseKey+"."+username, routing.PauseKey, pubsub.Transient)
-	if err != nil {
-		log.Fatal("error binding the user to the queue", err)
-	}
-
 	gamestate := gamelogic.NewGameState(username)
+
+	err = pubsub.SubscribeJSON(connection, routing.ExchangePerilDirect, "pause."+username, routing.PauseKey, pubsub.Transient, handlerPause(gamestate))
+	if err != nil {
+		log.Fatal("couldnt subscribe to json:", err)
+	}
 
 	for {
 		inputs := gamelogic.GetInput()
@@ -44,11 +44,13 @@ func main() {
 			err = gamestate.CommandSpawn(inputs)
 			if err != nil {
 				log.Printf("couldnt spawn unit, err: %v", err)
+				return
 			}
 		case "move":
 			move, err := gamestate.CommandMove(inputs)
 			if err != nil {
 				log.Printf("couldnt move unit: %v", err)
+				return
 			}
 			log.Printf("move was successfull: %v", move)
 		case "status":
