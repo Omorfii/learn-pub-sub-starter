@@ -33,6 +33,20 @@ func main() {
 	if err != nil {
 		log.Fatal("couldnt subscribe to json:", err)
 	}
+	err = pubsub.SubscribeJSON(connection,
+		routing.ExchangePerilTopic,
+		routing.ArmyMovesPrefix+"."+username,
+		routing.ArmyMovesPrefix+".*",
+		pubsub.Transient,
+		handlerMove(gamestate))
+	if err != nil {
+		log.Printf("couldnt subscribe to move unit, err: %v", err)
+		return
+	}
+	publishCh, err := connection.Channel()
+	if err != nil {
+		log.Fatal("couldnt t create channel:", err)
+	}
 
 	for {
 		inputs := gamelogic.GetInput()
@@ -44,15 +58,23 @@ func main() {
 			err = gamestate.CommandSpawn(inputs)
 			if err != nil {
 				log.Printf("couldnt spawn unit, err: %v", err)
-				return
+
 			}
 		case "move":
 			move, err := gamestate.CommandMove(inputs)
 			if err != nil {
 				log.Printf("couldnt move unit: %v", err)
-				return
+
 			}
 			log.Printf("move was successfull: %v", move)
+
+			err = pubsub.PublishJSON(publishCh, routing.ExchangePerilTopic, routing.ArmyMovesPrefix+"."+username, move)
+			if err != nil {
+				log.Printf("couldnt publish move: %v", err)
+				return
+			}
+			log.Printf("move was published successfully")
+
 		case "status":
 			gamestate.CommandStatus()
 		case "help":
